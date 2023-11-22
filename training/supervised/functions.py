@@ -40,11 +40,8 @@ def load_questions(file_path):
         questions = json.load(f)
     return questions
 
-def get_red_team_question(i):
-  return 
-
-def form_prompt(i):
-  question = get_red_team_question(i)
+def form_prompt(questions, i):
+  question = questions[i]
   initial_prompt=f'''\nSYSTEM: You are the ASSISTANT. You only take part in this conversation as the ASSISTANT. Respond concisely and with no more than 40 to 50 words. You'll address revisions and critiques concisely.
   USER: {question}
 

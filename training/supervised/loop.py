@@ -25,7 +25,7 @@ def main():
     n_red_team_questions=len(questions)
 
     for n in range(n_red_team_questions):
-        initial_prompt = form_prompt(n)
+        initial_prompt = form_prompt(questions, n)
         response = initial_model.ask_prompt(initial_prompt)
         n_loops=1 # number of times to refine the assistant's answer
         for i in range(n_loops):
