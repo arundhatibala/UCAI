@@ -2,10 +2,13 @@ import json
 from huggingface_hub import hf_hub_download
 from llama_cpp import Llama
 import numpy
+import subprocess
+import sys
 
 class model():
 
     def __init__(self, model_name_or_path, model_basename):
+        install("llama-cpp-python==0.1.78")
         self.model_path = hf_hub_download(repo_id=model_name_or_path, filename=model_basename)
         # Load the model during initialization
         self.lcpp_llm = Llama(
@@ -20,6 +23,10 @@ class model():
                     repeat_penalty=1.2, top_k=150,
                     echo=True)
         return response
+
+
+def install(package):
+    subprocess.check_call([sys.executable, "-m", "pip", "install", package])
 
 def critique_revision_json(file_path):
     with open(file_path) as f:
