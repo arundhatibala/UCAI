@@ -6,6 +6,8 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, Trainer, TrainingA
 from trl import RewardTrainer, SFTTrainer, RewardConfig
 
 def main():
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
     dataset = load_dataset("andersonbcdefg/redteaming_eval_pairwise")
     dataset = dataset["train"].train_test_split(test_size=0.2)
 
@@ -32,6 +34,7 @@ def main():
             no_cuda=True,
         )
     
+    base_model.to(device)
     trainer = RewardTrainer(model=base_model,
                         tokenizer=tokenizer,
                         train_dataset=formatted_dataset['train'],
