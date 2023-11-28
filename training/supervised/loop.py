@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import random
+from transformers import AutoTokenizer, AutoModelForCausalLM
 
 def main():
 
@@ -18,38 +19,42 @@ def main():
     #cuda settings here (this is not working)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    #initialize the model
-    initial_model = model(model_name_or_path="TheBloke/Llama-2-13B-chat-GGML", 
-                                      model_basename="llama-2-13b-chat.ggmlv3.q5_1.bin")
-    print("\n I arrived here\n")
+    base_model="TinyLlama/TinyLlama-1.1B-Chat-v0.6"
+
+    tokenizer = AutoTokenizer.from_pretrained(base_model)
+    model = AutoModelForCausalLM.from_pretrained(base_model)
+    
     n_red_team_questions=len(questions)
 
+    prompt= "What is up?"
+
+    response=ask_prompt(model, tokenizer, prompt)
+
+    print(response)
     for n in range(n_red_team_questions):
-        print("\nhello\n")
         initial_prompt = form_prompt(questions, n)
-        print("\nhello\n")
-        response = initial_model.ask_prompt(initial_prompt)
-        print("\nhello\n")
+        response = ask_prompt(model, tokenizer, initial_prompt)
         n_loops=1 # number of times to refine the assistant's answer
         for i in range(n_loops):
-            print("\nSecond stage\n")
+
             # random critique & revision
             random_index = random.randint(0, 15)
             crit = critiques[random_index]
             rev = revisions[random_index]
-            print("\nThird stage\n")
+
             # concatenate critique to the previous answer
-            prompt_critique = response["choices"][0]["text"] + '\n\n'+ crit
+            prompt_critique = response + '\n\n'+ crit
+            #response["choices"][0]["text"] + '\n\n'+ crit
 
             # critique
-            response=initial_model.ask_prompt(prompt_critique)
+            response=ask_prompt(model, tokenizer, prompt_critique)
             # concatenate revision to conversation
-            prompt_revision = response["choices"][0]["text"] + rev
-            print(response["choices"][0]["text"])
+            prompt_revision = response + rev
+            print(response)
 
             # revision phase (usually it doesn't reach here)
-            response=initial_model.ask_prompt(prompt_revision)
-            print(response["choices"][0]["text"])
+            response=ask_prompt(model, tokenizer, prompt_revision)
+            print(response)
 
 if __name__ == "__main__":
     main()

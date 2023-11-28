@@ -1,32 +1,8 @@
 import json
 from huggingface_hub import hf_hub_download
-from llama_cpp import Llama
 import numpy
 import subprocess
 import sys
-
-class model():
-
-    def __init__(self, model_name_or_path, model_basename):
-        install("llama-cpp-python==0.1.78")
-        self.model_path = hf_hub_download(repo_id=model_name_or_path, filename=model_basename)
-        # Load the model during initialization
-        self.lcpp_llm = Llama(
-            model_path=self.model_path,
-            n_threads=2,  # CPU cores
-            n_batch=512,  # Should be between 1 and n_ctx, consider the amount of VRAM in your GPU.
-            n_gpu_layers=32  # Change this value based on your model and your GPU VRAM pool.
-        )
-        
-    def ask_prompt(self, prompt):
-        response=self.lcpp_llm(prompt=prompt, max_tokens=512, temperature=1, top_p=0.95,
-                    repeat_penalty=1.2, top_k=150,
-                    echo=True)
-        return response
-
-
-def install(package):
-    subprocess.check_call([sys.executable, "-m", "pip", "install", package])
 
 def critique_revision_json(file_path):
     with open(file_path) as f:
@@ -55,4 +31,12 @@ def form_prompt(questions, i):
   ASSISTANT:
   '''
   return initial_prompt
+
+def ask_prompt(model, tokenizer, prompt):
+    inputs = tokenizer(prompt, return_tensors="pt")
+    generate_ids = model.generate(inputs.input_ids, max_length=30)
+
+    response=tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+    return str(response)
+
 
