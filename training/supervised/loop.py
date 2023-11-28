@@ -11,7 +11,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 def main():
 
     #import critiques and revisions
-    critique_revision_path = '../../prompts/CritiqueRevisionInstructions.json'
+    critique_revision_path = '../../prompts/CritiqueRevisionInstructions2.json'
     critiques, revisions = critique_revision_json(critique_revision_path)
 
     #import questions
