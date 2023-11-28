@@ -27,15 +27,9 @@ def main():
     model = AutoModelForCausalLM.from_pretrained(base_model)
     
     n_red_team_questions=len(questions)
-
-    prompt= "What is up?"
-
-    response=ask_prompt(model, tokenizer, prompt)
     
     # create a DF to convert to csv and store final Critiqued-revised answers
     df = pd.DataFrame({'question': [],    'final_answer': []})
-
-    print(response)
     for n in range(n_red_team_questions):
         initial_prompt = form_prompt(questions, n)
         response = ask_prompt(model, tokenizer, initial_prompt)
@@ -55,7 +49,6 @@ def main():
             response=ask_prompt(model, tokenizer, prompt_critique)
             # concatenate revision to conversation
             prompt_revision = response + rev
-            print(response)
 
             # revision phase 
             response=ask_prompt(model, tokenizer, prompt_revision)
