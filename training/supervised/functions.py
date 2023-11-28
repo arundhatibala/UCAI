@@ -18,8 +18,8 @@ class model():
             n_gpu_layers=32  # Change this value based on your model and your GPU VRAM pool.
         )
         
-    def ask_prompt(lcpp_llm, prompt):
-        response=lcpp_llm(prompt=prompt, max_tokens=512, temperature=1, top_p=0.95,
+    def ask_prompt(self, prompt):
+        response=self.lcpp_llm(prompt=prompt, max_tokens=512, temperature=1, top_p=0.95,
                     repeat_penalty=1.2, top_k=150,
                     echo=True)
         return response

@@ -19,22 +19,25 @@ def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     #initialize the model
-    initial_model = model(model_name_or_path="TheBloke/Llama-2-13B-chat-GGML",
+    initial_model = model(model_name_or_path="TheBloke/Llama-2-13B-chat-GGML", 
                                       model_basename="llama-2-13b-chat.ggmlv3.q5_1.bin")
-    
+    print("\n I arrived here\n")
     n_red_team_questions=len(questions)
 
     for n in range(n_red_team_questions):
+        print("\nhello\n")
         initial_prompt = form_prompt(questions, n)
+        print("\nhello\n")
         response = initial_model.ask_prompt(initial_prompt)
+        print("\nhello\n")
         n_loops=1 # number of times to refine the assistant's answer
         for i in range(n_loops):
-
+            print("\nSecond stage\n")
             # random critique & revision
             random_index = random.randint(0, 15)
             crit = critiques[random_index]
             rev = revisions[random_index]
-
+            print("\nThird stage\n")
             # concatenate critique to the previous answer
             prompt_critique = response["choices"][0]["text"] + '\n\n'+ crit
 
