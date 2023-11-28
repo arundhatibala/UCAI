@@ -1,5 +1,7 @@
 # main.py
 from functions import *
+import pandas as pd
+from openpyxl.workbook import Workbook
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -29,6 +31,9 @@ def main():
     prompt= "What is up?"
 
     response=ask_prompt(model, tokenizer, prompt)
+    
+    # create a DF to convert to csv and store final Critiqued-revised answers
+    df = pd.DataFrame({'question': [],    'final_answer': []})
 
     print(response)
     for n in range(n_red_team_questions):
@@ -38,7 +43,7 @@ def main():
         for i in range(n_loops):
 
             # random critique & revision
-            random_index = random.randint(0, 15)
+            random_index = random.randint(0, 3)
             crit = critiques[random_index]
             rev = revisions[random_index]
 
@@ -52,9 +57,16 @@ def main():
             prompt_revision = response + rev
             print(response)
 
-            # revision phase (usually it doesn't reach here)
+            # revision phase 
             response=ask_prompt(model, tokenizer, prompt_revision)
             print(response)
+        
+        # adding question and answer to the DF
+        new_row = {'question': initial_prompt, 'final_answer': response}
+        df.loc[len(df)] = new_row
+    
+    # export to excel file
+    df.to_excel('Critique-Response-Dataset.xlsx', index=False)
 
 if __name__ == "__main__":
     main()
