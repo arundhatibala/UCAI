@@ -30,7 +30,7 @@ def main():
     
     # create a DF to convert to csv and store final Critiqued-revised answers
     df = pd.DataFrame({'question': [],    'final_answer': []})
-    for n in range(n_red_team_questions):
+    for n in range(5):
         initial_prompt = form_prompt(questions, n)
         response = ask_prompt(model, tokenizer, initial_prompt)
         n_loops=1 # number of times to refine the assistant's answer
@@ -52,14 +52,15 @@ def main():
 
             # revision phase 
             response=ask_prompt(model, tokenizer, prompt_revision)
-            print(response)
         
+        final_answer = response.replace(prompt_revision, '')
+        print(final_answer)
         # adding question and answer to the DF
-        new_row = {'question': initial_prompt, 'final_answer': response}
+        new_row = {'question': initial_prompt, 'final_answer': final_answer}
         df.loc[len(df)] = new_row
     
     # export to excel file
-    df.to_excel('Critique-Response-Dataset.xlsx', index=False)
+    df.to_csv('Critique-Response-Dataset.csv', index=False)
 
 if __name__ == "__main__":
     main()
