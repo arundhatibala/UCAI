@@ -35,12 +35,13 @@ def main():
     model = AutoModelForCausalLM.from_pretrained(base_model, token=access_token)
     
     n_red_team_questions=len(questions)
-    
+
     # create a DF to convert to csv and store final Critiqued-revised answers
-    df = pd.DataFrame({'question': [],    'final_answer': []})
+    df = pd.DataFrame({'text': []})
     for n in range(5):
         initial_prompt = form_prompt(questions, n)
         response = ask_prompt(model, tokenizer, initial_prompt)
+        print()
         n_loops=1 # number of times to refine the assistant's answer
         for i in range(n_loops):
 
@@ -50,23 +51,21 @@ def main():
             rev = revisions[random_index]
 
             # concatenate critique to the previous answer
-            prompt_critique = response + '\n\n[INST]'+ crit + "[/INST]"
+            prompt_critique = response + '[INST]'+ crit + "[/INST]"
             #response["choices"][0]["text"] + '\n\n'+ crit
 
             # critique
             response=ask_prompt(model, tokenizer, prompt_critique)
             # concatenate revision to conversation
-            prompt_revision = response + rev
+            prompt_revision = response + '[INST]'+ rev + "[/INST]"
 
-            # revision phase 
+            # revision phase
             response=ask_prompt(model, tokenizer, prompt_revision)
             print(response)
-        
-        final_answer = response.replace(prompt_revision, '')
-        # adding question and answer to the DF
-        new_row = {'question': initial_prompt, 'final_answer': final_answer}
+        # adding conv to df
+        new_row = {'text': response}
         df.loc[len(df)] = new_row
-    
+
     # export to excel file
     df.to_csv('critique_revisions.csv', index=False)
 
