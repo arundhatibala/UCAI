@@ -60,9 +60,9 @@ def main():
 
             # revision phase 
             response=ask_prompt(model, tokenizer, prompt_revision)
+            print(response)
         
         final_answer = response.replace(prompt_revision, '')
-        print(final_answer)
         # adding question and answer to the DF
         new_row = {'question': initial_prompt, 'final_answer': final_answer}
         df.loc[len(df)] = new_row
