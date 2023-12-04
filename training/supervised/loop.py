@@ -9,6 +9,7 @@ import random
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
+    LlamaTokenizer,
     TrainingArguments,
     pipeline,
     logging,
