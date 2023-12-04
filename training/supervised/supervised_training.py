@@ -16,7 +16,7 @@ from trl import SFTTrainer
 def main():
 
     #cuda settings here (this is not working)
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = torch.device("cuda:0")
     dataset = load_dataset("csv", data_files="critique_revisions.csv", split="train")
 
     # The model from HuggingFace
@@ -121,7 +121,6 @@ def main():
     device_map = {"": 0}
 
     #################################################################################
-    # Load dataset (you can process it here)
 
     # Load tokenizer and model with QLoRA configuration
     compute_dtype = getattr(torch, bnb_4bit_compute_dtype)
@@ -150,10 +149,14 @@ def main():
     model.config.use_cache = False
     model.config.pretraining_tp = 1
 
+    model.to(device)
+
     # Load LLaMA tokenizer
     tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
     tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = "right"
+
+    tokenizer.to(device)
 
     # Load LoRA configuration
     peft_config = LoraConfig(
@@ -202,14 +205,6 @@ def main():
 
     # Save trained model
     trainer.model.save_pretrained(new_model)
-
-
-def formatting_prompts_func(example):
-    output_texts = []
-    for i in range(len(example['question'])):
-        text = f"### Question: {example['question'][i]}\n ### Answer: {example['final_answer'][i]}"
-        output_texts.append(text)
-    return output_texts
 
 if __name__ == "__main__":
     main()
