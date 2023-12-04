@@ -21,7 +21,7 @@ def main():
     #cuda settings here (this is not working)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    base_model="TinyLlama/TinyLlama-1.1B-Chat-v0.6"
+    base_model="NousResearch/Llama-2-7b-chat-hf"
 
     tokenizer = AutoTokenizer.from_pretrained(base_model)
     model = AutoModelForCausalLM.from_pretrained(base_model)
@@ -60,7 +60,7 @@ def main():
         df.loc[len(df)] = new_row
     
     # export to excel file
-    df.to_csv('Critique-Response-Dataset.csv', index=False)
+    df.to_csv('critique_revisions.csv', index=False)
 
 if __name__ == "__main__":
     main()
