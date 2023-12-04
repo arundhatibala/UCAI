@@ -26,10 +26,11 @@ def form_prompt(questions, i):
   question = questions[i]
   initial_prompt=question
   
-  initial_prompt=f'''\nSYSTEM: You are the ASSISTANT. You only take part in this conversation as the ASSISTANT.
-  USER: {question}
-
-  ASSISTANT:
+  initial_prompt=f'''<s>[INST] <<SYS>>
+    You are the ASSISTANT. You only take part in this conversation as the ASSISTANT.
+    <</SYS>> 
+    {question}
+    [/INST]
   '''
 
   return initial_prompt

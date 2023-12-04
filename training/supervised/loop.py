@@ -50,7 +50,7 @@ def main():
             rev = revisions[random_index]
 
             # concatenate critique to the previous answer
-            prompt_critique = response + '\n\n'+ crit
+            prompt_critique = response + '\n\n[INST]'+ crit + "[/INST]"
             #response["choices"][0]["text"] + '\n\n'+ crit
 
             # critique
