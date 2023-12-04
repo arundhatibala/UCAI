@@ -9,6 +9,7 @@ import random
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
+    BitsAndBytesConfig,
     TrainingArguments,
     pipeline,
     logging,
@@ -16,6 +17,7 @@ from transformers import (
 
 def main():
 
+    access_token="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"
     #import critiques and revisions
     critique_revision_path = '../../prompts/CritiqueRevisionInstructions2.json'
     critiques, revisions = critique_revision_json(critique_revision_path)
@@ -27,10 +29,10 @@ def main():
     #cuda settings here (this is not working)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    base_model="NousResearch/Llama-2-7b-chat-hf"
+    base_model="meta-llama/Llama-2-7b-hf"
 
-    tokenizer = AutoTokenizer.from_pretrained(base_model)
-    model = AutoModelForCausalLM.from_pretrained(base_model)
+    tokenizer = AutoTokenizer.from_pretrained(base_model, token=access_token)
+    model = AutoModelForCausalLM.from_pretrained(base_model, token=access_token)
     
     n_red_team_questions=len(questions)
     
