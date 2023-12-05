@@ -19,8 +19,8 @@ def main():
     device = torch.device("cuda:0")
     dataset = load_dataset("csv", data_files="critique_revisions.csv", split="train")
 
-    print(torch.cuda.empty_cache())
-    print(torch.cuda.memory_allocated())
+    torch.cuda.empty_cache()
+    torch.cuda.memory_allocated()
 
     # The model from HuggingFace
     model_name = "TinyLlama/TinyLlama-1.1B-Chat-v0.6"
