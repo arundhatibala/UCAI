@@ -20,7 +20,7 @@ def main():
     dataset = load_dataset("csv", data_files="critique_revisions.csv", split="train")
 
     # The model from HuggingFace
-    model_name = "NousResearch/Llama-2-7b-chat-hf"
+    model_name = "TinyLlama/TinyLlama-1.1B-Chat-v0.6"
 
     # Fine-tuned model name
     new_model = "supervised-test"
