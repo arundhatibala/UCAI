@@ -154,8 +154,6 @@ def main():
     tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = "right"
 
-    tokenizer.to(device)
-
     # Load LoRA configuration
     peft_config = LoraConfig(
         lora_alpha=lora_alpha,
