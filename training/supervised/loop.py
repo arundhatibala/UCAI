@@ -14,30 +14,57 @@ from transformers import (
     pipeline,
     logging,
 )
-from peft import LoraConfig
 
 def main():
 
-    compute_dtype = getattr(torch, "float16")
+    ################################################################################
+    # QLoRA parameters
 
-    quant_config = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_quant_type="nf4",
+    # LoRA attention dimension
+    lora_r = 64
+
+    # Alpha parameter for LoRA scaling
+    lora_alpha = 16
+
+    # Dropout probability for LoRA layers
+    lora_dropout = 0.1
+
+    ################################################################################
+    # bitsandbytes parameters
+
+    # Activate 4-bit precision base model loading
+    use_4bit = True
+
+    # Compute dtype for 4-bit base models
+    bnb_4bit_compute_dtype = "float16"
+
+    # Quantization type (fp4 or nf4)
+    bnb_4bit_quant_type = "nf4"
+
+    # Activate nested quantization for 4-bit base models (double quantization)
+    use_nested_quant = False
+
+    # Load tokenizer and model with QLoRA configuration
+    compute_dtype = getattr(torch, bnb_4bit_compute_dtype)
+
+    bnb_config = BitsAndBytesConfig(
+        load_in_4bit=use_4bit,
+        bnb_4bit_quant_type=bnb_4bit_quant_type,
         bnb_4bit_compute_dtype=compute_dtype,
-        bnb_4bit_use_double_quant=False,
+        bnb_4bit_use_double_quant=use_nested_quant,
     )
 
-    peft_params = LoraConfig(
-    lora_alpha=16,
-    lora_dropout=0.1,
-    r=64,
-    bias="none",
-    task_type="CAUSAL_LM",
-    )
+    # Check GPU compatibility with bfloat16
+    if compute_dtype == torch.float16 and use_4bit:
+        major, _ = torch.cuda.get_device_capability()
+        if major >= 8:
+            print("=" * 80)
+            print("Your GPU supports bfloat16: accelerate training with bf16=True")
+            print("=" * 80)
 
     ################################################################################
     # CODE SCRIPT
-
+    
     access_token="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"
     #import critiques and revisions
     critique_revision_path = '../../prompts/CritiqueRevisionInstructions2.json'
@@ -55,12 +82,12 @@ def main():
     tokenizer = AutoTokenizer.from_pretrained(base_model, token=access_token)
     model = AutoModelForCausalLM.from_pretrained(
         base_model,
-        quantization_config=quant_config,
+        quantization_config=bnb_config,
         device_map="auto"
     )
     
-    print(torch.cuda.empty_cache())
-    print(torch.cuda.memory_allocated())
+    torch.cuda.empty_cache()
+    torch.cuda.memory_allocated()
     model.cuda()
     n_red_team_questions=len(questions)
 
