@@ -169,6 +169,7 @@ def main():
         r=lora_r,
         bias="none",
         task_type="CAUSAL_LM",
+        target_modules=["q_proj","k_proj", "v_proj", "o_proj"]
     )
 
     # Set training parameters
