@@ -34,7 +34,7 @@ def main():
     tokenizer = AutoTokenizer.from_pretrained(base_model, token=access_token)
     model = AutoModelForCausalLM.from_pretrained(base_model, token=access_token)
     
-    model.to(device)
+    model.cuda()
     n_red_team_questions=len(questions)
 
     # create a DF to convert to csv and store final Critiqued-revised answers
