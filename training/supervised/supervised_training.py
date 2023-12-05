@@ -1,5 +1,6 @@
 import os
 import torch
+import torch.nn as nn
 from datasets import load_dataset
 from transformers import (
     AutoModelForCausalLM,
@@ -147,10 +148,14 @@ def main():
     model = AutoModelForCausalLM.from_pretrained(
         model_name,
         quantization_config=bnb_config,
-        device_map=device_map
     )
     model.config.use_cache = False
     model.config.pretraining_tp = 1
+
+    if torch.cuda.device_count()  >  1:
+        model = nn.DataParallel(model)
+
+    model = model.to(device)
 
     # Load LLaMA tokenizer
     tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
