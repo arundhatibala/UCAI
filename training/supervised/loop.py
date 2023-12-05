@@ -14,8 +14,29 @@ from transformers import (
     pipeline,
     logging,
 )
+from peft import LoraConfig
 
 def main():
+
+    compute_dtype = getattr(torch, "float16")
+
+    quant_config = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_quant_type="nf4",
+        bnb_4bit_compute_dtype=compute_dtype,
+        bnb_4bit_use_double_quant=False,
+    )
+
+    peft_params = LoraConfig(
+    lora_alpha=16,
+    lora_dropout=0.1,
+    r=64,
+    bias="none",
+    task_type="CAUSAL_LM",
+    )
+
+    ################################################################################
+    # CODE SCRIPT
 
     access_token="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"
     #import critiques and revisions
@@ -32,10 +53,14 @@ def main():
     base_model="meta-llama/Llama-2-13b-chat-hf"
 
     tokenizer = AutoTokenizer.from_pretrained(base_model, token=access_token)
-    model = AutoModelForCausalLM.from_pretrained(base_model, token=access_token)
+    model = AutoModelForCausalLM.from_pretrained(
+        base_model,
+        quantization_config=quant_config,
+        device_map="auto"
+    )
     
-    torch.cuda.empty_cache()
-    torch.cuda.memory_allocated()
+    print(torch.cuda.empty_cache())
+    print(torch.cuda.memory_allocated())
     model.cuda()
     n_red_team_questions=len(questions)
 
