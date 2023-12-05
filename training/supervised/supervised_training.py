@@ -195,7 +195,7 @@ def main():
 
     # Set supervised fine-tuning parameters
     trainer = SFTTrainer(
-        model=model,
+        model=model.module,
         train_dataset=dataset,
         peft_config=peft_config,
         dataset_text_field="text",
