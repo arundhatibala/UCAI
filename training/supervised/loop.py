@@ -144,7 +144,7 @@ def main():
     #cuda settings here (this is not working)
     #device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-    base_model="meta-llama/Llama-2-13b-chat-hf"
+    base_model="NousResearch/Llama-2-7b-chat-hf"
 
     tokenizer = AutoTokenizer.from_pretrained(base_model, token=access_token)
     # Load base model
