@@ -29,7 +29,7 @@ def main():
     #cuda settings here (this is not working)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    base_model="meta-llama/Llama-2-7b-chat-hf"
+    base_model="meta-llama/Llama-2-13b-chat-hf"
 
     tokenizer = AutoTokenizer.from_pretrained(base_model, token=access_token)
     model = AutoModelForCausalLM.from_pretrained(base_model, token=access_token)
@@ -41,7 +41,7 @@ def main():
     for n in range(5):
         initial_prompt = form_prompt(questions, n)
         response = ask_prompt(model, tokenizer, initial_prompt)
-        print()
+        row=""
         n_loops=1 # number of times to refine the assistant's answer
         for i in range(n_loops):
 
@@ -61,9 +61,11 @@ def main():
 
             # revision phase
             response=ask_prompt(model, tokenizer, prompt_revision)
-            print(response)
+            response = response.replace(prompt_revision, '')
+        row=questions[n] + response
+        print(row)
         # adding conv to df
-        new_row = {'text': response}
+        new_row = {'text': row}
         df.loc[len(df)] = new_row
 
     # export to excel file
