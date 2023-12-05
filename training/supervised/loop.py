@@ -34,6 +34,8 @@ def main():
     tokenizer = AutoTokenizer.from_pretrained(base_model, token=access_token)
     model = AutoModelForCausalLM.from_pretrained(base_model, token=access_token)
     
+    torch.cuda.empty_cache()
+    torch.cuda.memory_allocated()
     model.cuda()
     n_red_team_questions=len(questions)
 
