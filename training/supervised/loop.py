@@ -11,19 +11,11 @@ from transformers import (
     AutoTokenizer,
     BitsAndBytesConfig,
 )
-from peft import LoraConfig, PeftModel
 
 def main():
 
     #cuda settings here (this is not working)
     device = torch.device("cuda:0")
-    dataset = load_dataset("csv", data_files="critique_revisions.csv", split="train")
-
-    # The model from HuggingFace
-    model_name = "NousResearch/Llama-2-7b-chat-hf"
-
-    # Fine-tuned model name
-    new_model = "supervised-test"
 
     ################################################################################
     # QLoRA parameters
@@ -153,14 +145,14 @@ def main():
     questions=load_questions(questions_path)
 
     #cuda settings here (this is not working)
-    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+    #device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
     base_model="meta-llama/Llama-2-13b-chat-hf"
 
     tokenizer = AutoTokenizer.from_pretrained(base_model, token=access_token)
     # Load base model
     model = AutoModelForCausalLM.from_pretrained(
-        model_name,
+        base_model,
         quantization_config=bnb_config,
         device_map=device_map
     )
