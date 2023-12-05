@@ -16,7 +16,7 @@ from trl import SFTTrainer
 def main():
 
     #cuda settings here (this is not working)
-    device = torch.device("cuda:0")
+    device1 = torch.device("cuda:1")
     dataset = load_dataset("csv", data_files="critique_revisions.csv", split="train")
 
     # The model from HuggingFace
@@ -194,7 +194,7 @@ def main():
         tokenizer=tokenizer,
         args=training_arguments,
         packing=packing,
-    )
+    ).to(device1)
 
     # Train model
     trainer.train()
