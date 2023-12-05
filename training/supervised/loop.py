@@ -4,6 +4,7 @@ from datasets import load_dataset
 from functions import *
 import pandas as pd
 import torch
+import torch.nn as nn
 import random
 from transformers import (
     AutoModelForCausalLM,
@@ -159,11 +160,13 @@ def main():
     model = AutoModelForCausalLM.from_pretrained(
         base_model,
         quantization_config=bnb_config,
-        device_map=device_map
     )
     model.config.use_cache = False
     model.config.pretraining_tp = 1
-    
+
+    if torch.cuda.device_count()  >  1:
+        model = nn.DataParallel(model)
+
     print(torch.cuda.empty_cache())
     print(torch.cuda.memory_allocated())
     n_red_team_questions=len(questions)
