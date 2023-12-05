@@ -149,8 +149,6 @@ def main():
     model.config.use_cache = False
     model.config.pretraining_tp = 1
 
-    model.cuda()
-
     # Load LLaMA tokenizer
     tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
     tokenizer.pad_token = tokenizer.eos_token
