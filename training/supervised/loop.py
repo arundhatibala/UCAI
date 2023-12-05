@@ -27,13 +27,14 @@ def main():
     questions=load_questions(questions_path)
 
     #cuda settings here (this is not working)
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
     base_model="meta-llama/Llama-2-13b-chat-hf"
 
     tokenizer = AutoTokenizer.from_pretrained(base_model, token=access_token)
     model = AutoModelForCausalLM.from_pretrained(base_model, token=access_token)
     
+    model.to(device)
     n_red_team_questions=len(questions)
 
     # create a DF to convert to csv and store final Critiqued-revised answers
