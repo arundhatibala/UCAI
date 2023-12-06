@@ -174,7 +174,7 @@ def main():
 
     # create a DF to convert to csv and store final Critiqued-revised answers
     df = pd.DataFrame({'text': []})
-    for n in range(50):
+    for n in range(10):
         initial_prompt = form_prompt(questions, n)
         response = ask_prompt(model, tokenizer, initial_prompt)
         row=""
