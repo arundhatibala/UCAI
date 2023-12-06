@@ -168,41 +168,9 @@ def main():
     )
     model.to(device)
 
-
-
-    n_red_team_questions=len(questions)
-
     # create a DF to convert to csv and store final Critiqued-revised answers
-    df = pd.DataFrame({'text': []})
-    for n in range(10):
-        initial_prompt = form_prompt(questions, n)
-        response = ask_prompt(model, tokenizer, initial_prompt)
-        row=""
-        n_loops=1 # number of times to refine the assistant's answer
-        for i in range(n_loops):
-
-            # random critique & revision
-            random_index = random.randint(0, 3)
-            crit = critiques[random_index]
-            rev = revisions[random_index]
-
-            # concatenate critique to the previous answer
-            prompt_critique = response + '[INST]'+ crit + "[/INST]"
-            #response["choices"][0]["text"] + '\n\n'+ crit
-
-            # critique
-            response=ask_prompt(model, tokenizer, prompt_critique)
-            # concatenate revision to conversation
-            prompt_revision = response + '[INST]'+ rev + "[/INST]"
-
-            # revision phase
-            response=ask_prompt(model, tokenizer, prompt_revision)
-            response = response.replace(prompt_revision, '')
-        row=questions[n] + response
-        print(row)
-        # adding conv to df
-        new_row = {'text': row}
-        df.loc[len(df)] = new_row
+    df = pd.DataFrame(columns=['Q', 'A1', 'A2', 'V1', 'V2', 'V3', 'V4'])
+    
 
     # export to excel file
     df.to_json('critique_revisions.json', index=False)

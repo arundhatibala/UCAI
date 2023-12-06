@@ -16,10 +16,13 @@ from transformers import (
     logging,
 )
 
-
-
 def main():
+        
+    df = pd.DataFrame(columns=['Q', 'A1', 'A2', 'V1', 'V2', 'V3', 'V4'])
+    with open('../../prompts/questions_clean.json') as f:
+        questions = json.load(f)
 
+    # export to excel file
     ################################################################################
     # QLoRA parameters
 
@@ -150,62 +153,55 @@ def main():
     
     #huggingface access token
     access_token="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"
-    #import critiques and revisions
-    critique_revision_path = '../../prompts/CritiqueRevisionInstructions2.json'
-    critiques, revisions = critique_revision_json(critique_revision_path)
 
     #import questions
-    questions_path='../../prompts/red_team_questions.json'
+    questions_path='../../prompts/questions_clean.json'
     questions=load_questions(questions_path)
 
     base_model="NousResearch/Llama-2-7b-chat-hf"
 
     tokenizer = AutoTokenizer.from_pretrained(base_model, token=access_token)
     # Load base model
-    model = AutoModelForCausalLM.from_pretrained(
-        base_model
-        #quantization_config=bnb_config,
-    )
+    model1 = AutoModelForCausalLM.from_pretrained(base_model)
+    
+
+
     model.to(device)
 
+    # create a DF to convert to json and store final reward policy
+    with open('../../prompts/good_principles.json') as json_file:
+        principles = json.load(json_file)
+        
+        for initial_prompt in questions:
+        # generating initial responses
+            response1 =  ask_prompt(model1, tokenizer, initial_prompt)
+            response2 =  ask_prompt(model1, tokenizer, initial_prompt)
 
+            answers = f"\n1. \"{r1_text}\"\n2. \"{r2_text}\"\n"
 
-    n_red_team_questions=len(questions)
+            r1_text = response1["choices"][0]["text"].replace(initial_prompt, "")
+            r2_text = response2["choices"][0]["text"].replace(initial_prompt, "")
+    
+            ai_generated_data = []
 
-    # create a DF to convert to csv and store final Critiqued-revised answers
-    df = pd.DataFrame({'text': []})
-    for n in range(10):
-        initial_prompt = form_prompt(questions, n)
-        response = ask_prompt(model, tokenizer, initial_prompt)
-        row=""
-        n_loops=1 # number of times to refine the assistant's answer
-        for i in range(n_loops):
+    for principle in principles:
+        system_prompt="SYSTEM: You are the ASSISTANT. You only take part in this conversation as the ASSISTANT. Respond concisely and short.\n"
+        prompt = system_prompt + "Consider the following question:\nHUMAN: " + initial_prompt + "\n\n" + principle + "\n" + answers + "\nSYSTEM: Please answer only by saying \"Option 1\" or \"Option 2\".\n\nAssistant: "
+        response = ask_prompt(prompt)
+        print("----Response: ", response["choices"][0]["text"][-1])
+        pref = response["choices"][0]["text"][-1]
+        # clean preference value
+        pref = pref["choices"][0]["text"].replace(r1_text, "")
+        pref = pref.replace(r2_text, "")
+        pref = pref.replace(initial_prompt, "")
+        pref = pref.replace(i,"")
+        print(pref)
+        ai_generated_data.append(pref)
 
-            # random critique & revision
-            random_index = random.randint(0, 3)
-            crit = critiques[random_index]
-            rev = revisions[random_index]
+    # Create a data point for the AI-generated preference dataset
+        print("appended data points: ", ai_generated_data)
 
-            # concatenate critique to the previous answer
-            prompt_critique = response + '[INST]'+ crit + "[/INST]"
-            #response["choices"][0]["text"] + '\n\n'+ crit
-
-            # critique
-            response=ask_prompt(model, tokenizer, prompt_critique)
-            # concatenate revision to conversation
-            prompt_revision = response + '[INST]'+ rev + "[/INST]"
-
-            # revision phase
-            response=ask_prompt(model, tokenizer, prompt_revision)
-            response = response.replace(prompt_revision, '')
-        row=questions[n] + response
-        print(row)
-        # adding conv to df
-        new_row = {'text': row}
-        df.loc[len(df)] = new_row
-
-    # export to excel file
-    df.to_json('critique_revisions.json', index=False)
+        return ai_generated_data
 
 if __name__ == "__main__":
     main()
