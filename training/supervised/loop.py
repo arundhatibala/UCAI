@@ -20,9 +20,6 @@ from transformers import (
 
 def main():
 
-    #cuda settings here (this is not working)
-    device = torch.device("cuda:0")
-
     ################################################################################
     # QLoRA parameters
 
@@ -131,16 +128,27 @@ def main():
     )
 
     # Check GPU compatibility with bfloat16
-    if compute_dtype == torch.float16 and use_4bit:
+    """if compute_dtype == torch.float16 and use_4bit:
         major, _ = torch.cuda.get_device_capability()
         if major >= 8:
             print("=" * 80)
             print("Your GPU supports bfloat16: accelerate training with bf16=True")
             print("=" * 80)
-
+    """
     ################################################################################
     # CODE SCRIPT
     
+
+    #cuda settings here
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+    # TEST with GPU
+    device = torch.device("cpu")
+
+    """if torch.cuda.device_count()  >  1:
+    model = nn.DataParallel(model)"""
+    
+    #huggingface access token
     access_token="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"
     #import critiques and revisions
     critique_revision_path = '../../prompts/CritiqueRevisionInstructions2.json'
@@ -150,30 +158,23 @@ def main():
     questions_path='../../prompts/red_team_questions.json'
     questions=load_questions(questions_path)
 
-    #cuda settings here (this is not working)
-    #device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-
     base_model="NousResearch/Llama-2-7b-chat-hf"
 
     tokenizer = AutoTokenizer.from_pretrained(base_model, token=access_token)
     # Load base model
     model = AutoModelForCausalLM.from_pretrained(
-        base_model,
-        quantization_config=bnb_config,
+        base_model
+        #quantization_config=bnb_config,
     )
-    model.config.use_cache = False
-    model.config.pretraining_tp = 1
+    model.to(device)
 
-    if torch.cuda.device_count()  >  1:
-        model = nn.DataParallel(model)
 
-    print(torch.cuda.empty_cache())
-    print(torch.cuda.memory_allocated())
+
     n_red_team_questions=len(questions)
 
     # create a DF to convert to csv and store final Critiqued-revised answers
     df = pd.DataFrame({'text': []})
-    for n in range(5):
+    for n in range(50):
         initial_prompt = form_prompt(questions, n)
         response = ask_prompt(model, tokenizer, initial_prompt)
         row=""

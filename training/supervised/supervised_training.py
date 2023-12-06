@@ -16,19 +16,6 @@ from trl import SFTTrainer
 
 def main():
 
-    #cuda settings here (this is not working)
-    device = torch.device("cuda:0")
-    dataset = load_dataset("csv", data_files="critique_revisions.csv", split="train")
-
-    torch.cuda.empty_cache()
-    torch.cuda.memory_allocated()
-
-    # The model from HuggingFace
-    model_name = "TinyLlama/TinyLlama-1.1B-Chat-v0.6"
-
-    # Fine-tuned model name
-    new_model = "supervised-test"
-
     ################################################################################
     # QLoRA parameters
 
@@ -144,17 +131,37 @@ def main():
             print("Your GPU supports bfloat16: accelerate training with bf16=True")
             print("=" * 80)
 
+    #################################################################################
+    # SCRIPT HERE 
+
+    #cuda settings here
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+    # TEST with GPU
+    device = torch.device("cpu")
+    
+    """torch.save(model.state_dict(), "./models")
+
+    model.load_state_dict(torch.load("./models"))
+    model.to(device)
+
+    if torch.cuda.device_count()  >  1:
+        model = nn.DataParallel(model)"""
+    
+    dataset = load_dataset("csv", data_files="critique_revisions.csv", split="train")
+
+    # The model from HuggingFace
+    model_name = "TinyLlama/TinyLlama-1.1B-Chat-v0.6"
+
+    # Fine-tuned model name
+    new_model = "supervised-test"
+
     # Load base model
     model = AutoModelForCausalLM.from_pretrained(
         model_name,
         quantization_config=bnb_config,
     )
-    model.config.use_cache = False
-    model.config.pretraining_tp = 1
-
-    if torch.cuda.device_count()  >  1:
-        model = nn.DataParallel(model)
-
+    
     model = model.to(device)
 
     # Load LLaMA tokenizer
@@ -193,9 +200,11 @@ def main():
         report_to="tensorboard"
     )
 
+    torch.cuda.empty_cache()
+
     # Set supervised fine-tuning parameters
     trainer = SFTTrainer(
-        model=model.module,
+        model=model,
         train_dataset=dataset,
         peft_config=peft_config,
         dataset_text_field="text",
