@@ -143,7 +143,7 @@ def main():
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     # TEST with GPU
-    device = torch.device("cpu")
+    #device = torch.device("cpu")
 
     """if torch.cuda.device_count()  >  1:
     model = nn.DataParallel(model)"""
@@ -158,7 +158,7 @@ def main():
     questions_path='../../prompts/red_team_questions.json'
     questions=load_questions(questions_path)
 
-    base_model="NousResearch/Llama-2-7b-chat-hf"
+    base_model="TinyLlama/TinyLlama-1.1B-Chat-v0.6"
 
     tokenizer = AutoTokenizer.from_pretrained(base_model, token=access_token)
     # Load base model

@@ -90,7 +90,7 @@ def main():
     questions_path='../../prompts/questions_clean.json'
     questions=load_questions(questions_path)
 
-    base_model="TinyLlama/TinyLlama-1.1B-Chat-v0.6"
+    base_model="NousResearch/Llama-2-7b-chat-hf"
 
     tokenizer = AutoTokenizer.from_pretrained(base_model, token=access_token)
     # Load base model
