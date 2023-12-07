@@ -158,11 +158,9 @@ def main():
     questions_path='../../prompts/red_team_questions.json'
     questions=load_questions(questions_path)
 
-    base_model="TinyLlama/TinyLlama-1.1B-Chat-v0.6"
+    base_model="NousResearch/Llama-2-7b-chat-hf"
 
     tokenizer = AutoTokenizer.from_pretrained(base_model, token=access_token)
-
-    torch.cuda.empty_cache()
     # Load base model
     model = AutoModelForCausalLM.from_pretrained(
         base_model
@@ -176,7 +174,7 @@ def main():
 
     # create a DF to convert to csv and store final Critiqued-revised answers
     df = pd.DataFrame({'text': []})
-    for n in range(10):
+    for n in range(50):
         initial_prompt = form_prompt(questions, n)
         response = ask_prompt(model, tokenizer, initial_prompt)
         row=""
@@ -207,7 +205,7 @@ def main():
         df.loc[len(df)] = new_row
 
     # export to excel file
-    df.to_json('critique_revisions.json', index=False)
+    df.to_csv('critique_revisions.csv', index=False)
 
 if __name__ == "__main__":
     main()
