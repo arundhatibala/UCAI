@@ -112,6 +112,8 @@ def main():
         r1_text = response1.replace(initial_prompt, "")
         r2_text = response2.replace(initial_prompt, "")
 
+        answers = f"\n1. \"{r1_text}\"\n2. \"{r2_text}\"\n"
+
         ai_generated_data = []
         ai_generated_data.append(initial_prompt)
         ai_generated_data.append(r1_text)
