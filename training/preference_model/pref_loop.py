@@ -134,7 +134,7 @@ def main():
         print(df.index)
         print(df.columns)
         print("appended data points: ", ai_generated_data)
-        df = df.concat(pd.Series(ai_generated_data, index=df.columns), ignore_index=True)
+        df.loc[len(df)] = ai_generated_data
 
 if __name__ == "__main__":
     main()
