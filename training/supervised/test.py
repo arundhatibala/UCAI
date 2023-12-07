@@ -10,7 +10,7 @@ X.to(device)
 
 access_token="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"
 
-base_model="NousResearch/Llama-2-7b-chat-hf"
+base_model="meta-llama/Llama-2-7b-chat-hf"
 
 model = AutoModelForCausalLM.from_pretrained(
         base_model,
