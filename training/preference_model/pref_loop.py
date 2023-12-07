@@ -104,7 +104,7 @@ def main():
     with open('../../prompts/good_principles.json') as json_file:
         principles = json.load(json_file)
         
-    for initial_prompt in questions:
+    for initial_prompt in questions[:4]:
     # generating initial responses
         response1 =  ask_prompt(model, tokenizer, initial_prompt)
         response2 =  ask_prompt(model, tokenizer, initial_prompt)
@@ -123,16 +123,16 @@ def main():
             system_prompt="SYSTEM: You are the ASSISTANT. You only take part in this conversation as the ASSISTANT. Respond concisely and short.\n"
             prompt = system_prompt + "Consider the following question:\nHUMAN: " + initial_prompt + "\n\n" + principle + "\n" + answers + "\nSYSTEM: Please answer only by saying \"Option 1\" or \"Option 2\".\n\nAssistant: "
             response = ask_prompt(model, tokenizer, prompt)
-            print("----Response: ", response[-1])
-            pref = response[-1]
+            
+            pref = response
             # clean preference value
-            #pref = pref["choices"][0]["text"].replace(r1_text, "")
-            #pref = pref.replace(r2_text, "")
-            #pref = pref.replace(prompt, "")
-            print(pref)
+            pref = pref.replace(prompt, "")
             ai_generated_data.append(pref)
+            print("----Pref: ", pref)
 
     # Create a data point for the AI-generated preference dataset
+        print(df.index)
+        print(df.columns)
         print("appended data points: ", ai_generated_data)
         df = df.append(pd.Series(ai_generated_data, index=df.columns), ignore_index=True)
 
