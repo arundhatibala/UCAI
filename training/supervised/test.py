@@ -2,6 +2,7 @@ import torch
 from transformers import (
     AutoModelForCausalLM,
 )
+import time
 
 X=torch.tensor((20,20))
 device=torch.device("cuda:0")
@@ -13,3 +14,4 @@ model = AutoModelForCausalLM.from_pretrained(
         base_model
     )
 model.to(device)
+time.wait(200)
