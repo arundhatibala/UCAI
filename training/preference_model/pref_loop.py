@@ -122,7 +122,7 @@ def main():
         for principle in principles:
             system_prompt="SYSTEM: You are the ASSISTANT. You only take part in this conversation as the ASSISTANT. Respond concisely and short.\n"
             prompt = system_prompt + "Consider the following question:\nHUMAN: " + initial_prompt + "\n\n" + principle + "\n" + answers + "\nSYSTEM: Please answer only by saying \"Option 1\" or \"Option 2\".\n\nAssistant: "
-            response = ask_prompt(prompt)
+            response = ask_prompt(model, tokenizer, prompt)
             print("----Response: ", response[-1])
             pref = response[-1]
             # clean preference value
