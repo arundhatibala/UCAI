@@ -109,10 +109,8 @@ def main():
         response1 =  ask_prompt(model, tokenizer, initial_prompt)
         response2 =  ask_prompt(model, tokenizer, initial_prompt)
 
-        answers = f"\n1. \"{r1_text}\"\n2. \"{r2_text}\"\n"
-
-        r1_text = response1["choices"][0]["text"].replace(initial_prompt, "")
-        r2_text = response2["choices"][0]["text"].replace(initial_prompt, "")
+        r1_text = response1.replace(initial_prompt, "")
+        r2_text = response2.replace(initial_prompt, "")
 
         ai_generated_data = []
         ai_generated_data.append(initial_prompt)
@@ -123,12 +121,12 @@ def main():
             system_prompt="SYSTEM: You are the ASSISTANT. You only take part in this conversation as the ASSISTANT. Respond concisely and short.\n"
             prompt = system_prompt + "Consider the following question:\nHUMAN: " + initial_prompt + "\n\n" + principle + "\n" + answers + "\nSYSTEM: Please answer only by saying \"Option 1\" or \"Option 2\".\n\nAssistant: "
             response = ask_prompt(prompt)
-            print("----Response: ", response["choices"][0]["text"][-1])
-            pref = response["choices"][0]["text"][-1]
+            print("----Response: ", response[-1])
+            pref = response[-1]
             # clean preference value
-            pref = pref["choices"][0]["text"].replace(r1_text, "")
-            pref = pref.replace(r2_text, "")
-            pref = pref.replace(prompt, "")
+            #pref = pref["choices"][0]["text"].replace(r1_text, "")
+            #pref = pref.replace(r2_text, "")
+            #pref = pref.replace(prompt, "")
             print(pref)
             ai_generated_data.append(pref)
 
