@@ -14,4 +14,4 @@ model = AutoModelForCausalLM.from_pretrained(
         base_model
     )
 model.to(device)
-time.wait(200)
+time.sleep(1000)
