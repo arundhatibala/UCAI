@@ -158,10 +158,12 @@ def main():
     questions_path='../../prompts/red_team_questions.json'
     questions=load_questions(questions_path)
 
-    base_model="NousResearch/Llama-2-7b-chat-hf"
+    base_model="TinyLlama/TinyLlama-1.1B-Chat-v0.6"
 
     tokenizer = AutoTokenizer.from_pretrained(base_model, token=access_token)
     # Load base model
+
+    torch.cuda.empty_cache()
     model = AutoModelForCausalLM.from_pretrained(
         base_model
         #quantization_config=bnb_config,
