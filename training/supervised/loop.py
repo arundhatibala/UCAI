@@ -161,6 +161,8 @@ def main():
     base_model="TinyLlama/TinyLlama-1.1B-Chat-v0.6"
 
     tokenizer = AutoTokenizer.from_pretrained(base_model, token=access_token)
+
+    torch.cuda.empty_cache()
     # Load base model
     model = AutoModelForCausalLM.from_pretrained(
         base_model
