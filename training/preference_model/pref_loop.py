@@ -126,7 +126,6 @@ def main():
         pref = pref["choices"][0]["text"].replace(r1_text, "")
         pref = pref.replace(r2_text, "")
         pref = pref.replace(initial_prompt, "")
-        pref = pref.replace(i,"")
         print(pref)
         ai_generated_data.append(pref)
 
