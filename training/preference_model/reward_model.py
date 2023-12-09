@@ -11,10 +11,10 @@ def main():
     dataset = load_dataset("andersonbcdefg/redteaming_eval_pairwise")
     dataset = dataset["train"].train_test_split(test_size=0.2)
 
-    formatted_dataset = dataset.map(formatting_func)
-
     tokenizer = AutoTokenizer.from_pretrained("TinyLlama/TinyLlama-1.1B-Chat-v0.6", max_len=256)
     base_model = AutoModelForCausalLM.from_pretrained("TinyLlama/TinyLlama-1.1B-Chat-v0.6")
+
+    formatted_dataset = dataset.map(lambda x: formatting_func(x, tokenizer))
 
     ### Loading the TRL reward trainer and training the trainer
     training_args = RewardConfig(
@@ -46,24 +46,24 @@ def main():
     # save the reward model
     trainer.save_model("../../models/test_reward")
 
-def formatting_func(tokenizer, examples):
-    kwargs = {"padding": "max_length",
-              "truncation": True,
-              "max_length": 256,
-              "return_tensors": "pt"
-              }
+def formatting_func(example, tokenizer):
+  kwargs = {"padding": "max_length",
+            "truncation": True,
+            "max_length": 256,
+            "return_tensors": "pt"
+            }
 
-    prompt_plus_chosen_response = examples["prompt"] + "\n" + examples["response_a"]
-    prompt_plus_rejected_response = examples["prompt"] + "\n" + examples["response_b"]
+  prompt_plus_chosen_response = str(example["prompt"]) + "\n" + str(example["response_a"])
+  prompt_plus_rejected_response = str(example["prompt"]) + "\n" + str(example["response_b"])
 
-    # Then tokenize these modified fields.
-    tokens_chosen = tokenizer.encode_plus(prompt_plus_chosen_response, **kwargs)
-    tokens_rejected = tokenizer.encode_plus(prompt_plus_rejected_response, **kwargs)
+  # Then tokenize these modified fields.
+  tokens_chosen = tokenizer.encode_plus(prompt_plus_chosen_response, **kwargs)
+  tokens_rejected = tokenizer.encode_plus(prompt_plus_rejected_response, **kwargs)
 
-    return {
-        "input_ids_chosen": tokens_chosen["input_ids"][0], "attention_mask_chosen": tokens_chosen["attention_mask"][0],
-        "input_ids_rejected": tokens_rejected["input_ids"][0], "attention_mask_rejected": tokens_rejected["attention_mask"][0]
-    }
+  return {
+      "input_ids_chosen": tokens_chosen["input_ids"][0], "attention_mask_chosen": tokens_chosen["attention_mask"][0],
+      "input_ids_rejected": tokens_rejected["input_ids"][0], "attention_mask_rejected": tokens_rejected["attention_mask"][0]
+  }
 
 if __name__ == "__main__":
     main()
