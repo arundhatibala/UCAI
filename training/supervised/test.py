@@ -1,47 +1,84 @@
-import torch 
+import os
+
+os.environ['MASTER_ADDR'] = '128.179.128.20'
+os.environ['MASTER_PORT'] = '22'
+os.environ['WORLD_SIZE'] = '4'  # or the number of processes you're using
+os.environ['RANK'] = '0' 
+
+from functions import *
+
+import pandas as pd
+import torch
+import torch.distributed as dist
+from torch.nn.parallel import DistributedDataParallel as DDP
+
+import random
 from transformers import (
     AutoModelForCausalLM,
-    BitsAndBytesConfig
-)
-import time
-
-################################################################################
-# bitsandbytes parameters
-
-# Activate 4-bit precision base model loading
-use_4bit = True
-
-# Compute dtype for 4-bit base models
-bnb_4bit_compute_dtype = "float16"
-
-# Quantization type (fp4 or nf4)
-bnb_4bit_quant_type = "nf4"
-
-# Activate nested quantization for 4-bit base models (double quantization)
-use_nested_quant = False
-
-
-# Load tokenizer and model with QLoRA configuration
-compute_dtype = getattr(torch, bnb_4bit_compute_dtype)
-
-bnb_config = BitsAndBytesConfig(
-    load_in_4bit=use_4bit,
-    bnb_4bit_quant_type=bnb_4bit_quant_type,
-    bnb_4bit_compute_dtype=compute_dtype,
-    bnb_4bit_use_double_quant=use_nested_quant,
+    AutoTokenizer,
+    # BitsAndBytesConfig,
 )
 
+def setup_ddp(rank, world_size):
+    # Initialize the process group
+    dist.init_process_group(backend='nccl', init_method='env://', world_size=world_size, rank=rank)
+    torch.cuda.set_device(rank)
 
-device=torch.device("cuda:0")
+def cleanup():
+    dist.destroy_process_group()
 
-access_token="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"
+def main (rank, world_size):
+    setup_ddp(rank, world_size)
 
-base_model="meta-llama/Llama-2-7b-chat-hf"
+    device = torch.device(f'cuda:{rank}')
+    access_token = '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'
+    critique_revision_path = '../../prompts/CritiqueRevisionInstructions2.json'
+    critiques, revisions = critique_revision_json(critique_revision_path)
 
-model = AutoModelForCausalLM.from_pretrained(
-        base_model,
-        token=access_token,
-        quantization_config=bnb_config,
-    )
-model.to(device)
-time.sleep(1000)
+    print('critiques loaded')
+
+    #import questions
+    questions_path='../../prompts/red_team_questions.json'
+    questions=load_questions(questions_path)
+    print('questions loaded')
+
+    base_model="TinyLlama/TinyLlama-1.1B-Chat-v0.6"
+    print('model loaded')
+
+    tokenizer = AutoTokenizer.from_pretrained(base_model, token=access_token)
+    print('tokeniser created')
+
+    model = AutoModelForCausalLM.from_pretrained(base_model)
+    model = DDP(model.to(device), device_ids=[rank])
+    print('model sent to device')
+
+    # create responses
+    df = pd.DataFrame({'text': []})
+    print('df initialised')
+    for n in range(10):
+        initial_prompt = form_prompt(questions, n)  
+        response = ask_prompt(model, tokenizer, initial_prompt, device)
+        # print(response)
+        for i in range (0,1):
+            random_index = random.randint(0, 3)
+            crit = critiques[random_index]
+            rev = revisions[random_index]
+            prompt_critique = response + '[INST]'+ crit + "[/INST]"
+            response=ask_prompt(model, tokenizer, prompt_critique, device)
+            prompt_revision = response + '[INST]'+ rev + "[/INST]"
+            response=ask_prompt(model, tokenizer, prompt_revision, device)
+            response = response.replace(prompt_revision, '')
+        row=questions[n] + response
+        print(n)
+        new_row = {'text': row}
+        df.loc[len(df)] = new_row
+        print('appended to df4')
+
+    df.to_json('critique_revisions.json', index=False)
+    print(df.head())
+
+if __name__ == "__main__":
+    world_size = 4  # Set the total number of processes
+    for rank in range(world_size):
+        main(rank, world_size)
+    main()
