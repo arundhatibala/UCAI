@@ -9,105 +9,60 @@ import random
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
-    # BitsAndBytesConfig,
+    BitsAndBytesConfig,
     HfArgumentParser,
     TrainingArguments,
     pipeline,
     logging,
 )
+from peft import LoraConfig
 
 def main():
-        
+
+    compute_dtype = getattr(torch, "float16")
+
+    quant_config = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_quant_type="nf4",
+        bnb_4bit_compute_dtype=compute_dtype,
+        bnb_4bit_use_double_quant=False,
+    )
+
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    access_token="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"
+
+    base_model="meta-llama/Llama-2-7b-chat-hf"
+
+    model = AutoModelForCausalLM.from_pretrained(
+            base_model,
+            token=access_token,
+            quantization_config=quant_config,
+        )
+    model.config.use_cache = False
+    model.config.pretraining_tp = 1
+
+    model = nn.DataParallel(model, device_ids=[0, 1, 2, 3])
+
+    tokenizer = AutoTokenizer.from_pretrained(base_model, token=access_token)
+
+    ################################################################################
+    # CODE SCRIPT
+    
+    # create a DF to convert to json and store final reward policy
+
     df = pd.DataFrame(columns=['Q', 'A1', 'A2', 'V1', 'V2', 'V3', 'V4'])
     with open('../../prompts/questions_clean.json') as f:
         questions = json.load(f)
 
-    # export to excel file
-    ################################################################################
-    # QLoRA parameters
-
-    # LoRA attention dimension
-    lora_r = 64
-
-    # Alpha parameter for LoRA scaling
-    lora_alpha = 16
-
-    # Dropout probability for LoRA layers
-    lora_dropout = 0.1
-
-    ################################################################################
-    # bitsandbytes parameters
-
-    # Activate 4-bit precision base model loading
-    use_4bit = True
-
-    # Compute dtype for 4-bit base models
-    bnb_4bit_compute_dtype = "float16"
-
-    # Quantization type (fp4 or nf4)
-    bnb_4bit_quant_type = "nf4"
-
-    # Activate nested quantization for 4-bit base models (double quantization)
-    use_nested_quant = False
-
-    #################################################################################
-
-    # Load tokenizer and model with QLoRA configuration
-    compute_dtype = getattr(torch, bnb_4bit_compute_dtype)
-
-    # bnb_config = BitsAndBytesConfig(
-    #     load_in_4bit=use_4bit,
-    #     bnb_4bit_quant_type=bnb_4bit_quant_type,
-    #     bnb_4bit_compute_dtype=compute_dtype,
-    #     bnb_4bit_use_double_quant=use_nested_quant,
-    # )
-
-    # Check GPU compatibility with bfloat16
-    """if compute_dtype == torch.float16 and use_4bit:
-        major, _ = torch.cuda.get_device_capability()
-        if major >= 8:
-            print("=" * 80)
-            print("Your GPU supports bfloat16: accelerate training with bf16=True")
-            print("=" * 80)
-    """
-    ################################################################################
-    # CODE SCRIPT
-    
-
-    #cuda settings here
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-    # TEST with GPU
-    device = torch.device("cpu")
-
-    """if torch.cuda.device_count()  >  1:
-    model = nn.DataParallel(model)"""
-    
-    #huggingface access token
-    access_token="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"
-
-    #import questions
-    questions_path='../../prompts/questions_clean.json'
-    questions=load_questions(questions_path)
-
-    base_model="NousResearch/Llama-2-7b-chat-hf"
-
-    tokenizer = AutoTokenizer.from_pretrained(base_model, token=access_token)
-    # Load base model
-    model = AutoModelForCausalLM.from_pretrained(base_model)
-    
-
-
-    model.to(device)
-
-    # create a DF to convert to json and store final reward policy
     with open('../../prompts/good_principles.json') as json_file:
         principles = json.load(json_file)
         
     for initial_prompt in questions[:4]:
     # generating initial responses
-        response1 =  ask_prompt(model, tokenizer, initial_prompt)
-        response2 =  ask_prompt(model, tokenizer, initial_prompt)
+        response1 =  ask_prompt(model, tokenizer, initial_prompt, device)
+        response2 =  ask_prompt(model, tokenizer, initial_prompt, device)
 
         r1_text = response1.replace(initial_prompt, "")
         r2_text = response2.replace(initial_prompt, "")
@@ -122,7 +77,7 @@ def main():
         for principle in principles:
             system_prompt="SYSTEM: You are the ASSISTANT. You only take part in this conversation as the ASSISTANT. Respond concisely and short.\n"
             prompt = system_prompt + "Consider the following question:\nHUMAN: " + initial_prompt + "\n\n" + principle + "\n" + answers + "\nSYSTEM: Please answer only by saying \"Option 1\" or \"Option 2\".\n\nAssistant: "
-            response = ask_prompt(model, tokenizer, prompt)
+            response = ask_prompt(model, tokenizer, prompt, device)
             
             pref = response
             # clean preference value
