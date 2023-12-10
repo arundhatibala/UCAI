@@ -31,7 +31,6 @@ def main():
             warmup_steps=50,
             learning_rate=1e-5,
             save_total_limit=1,
-            no_cuda=True,
         )
     
     base_model.to(device)
