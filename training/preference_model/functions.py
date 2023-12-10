@@ -35,9 +35,11 @@ def form_prompt(questions, i):
 
   return initial_prompt
 
-def ask_prompt(model, tokenizer, prompt):
+
+def ask_prompt(model, tokenizer, prompt, device):
     inputs = tokenizer(prompt, return_tensors="pt")
-    generation_output = model.generate(**inputs, return_dict_in_generate=True, max_new_tokens=50, min_new_tokens=10)
+    inputs=inputs.to(device)
+    generation_output = model.module.generate(**inputs, return_dict_in_generate=True, max_new_tokens=100, min_new_tokens=10)
 
     response = tokenizer.batch_decode(generation_output['sequences'], skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
     return response
