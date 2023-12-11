@@ -1,0 +1,172 @@
+import os
+import torch
+import torch.nn as nn
+from datasets import load_dataset
+from transformers import (
+    AutoModelForCausalLM,
+    AutoTokenizer,
+    BitsAndBytesConfig,
+    HfArgumentParser,
+    TrainingArguments,
+    pipeline,
+    logging,
+)
+from peft import LoraConfig, PeftModel
+from trl import SFTTrainer
+
+def main():
+
+    compute_dtype = getattr(torch, "float16")
+
+    quant_config = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_quant_type="nf4",
+        bnb_4bit_compute_dtype=compute_dtype,
+        bnb_4bit_use_double_quant=False,
+    )
+
+    access_token="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"
+
+    base_model="meta-llama/Llama-2-7b-chat-hf"
+
+    model = AutoModelForCausalLM.from_pretrained(
+            base_model,
+            token=access_token,
+            quantization_config=quant_config,
+        )
+    model.config.use_cache = False
+    model.config.pretraining_tp = 1
+
+    model = nn.DataParallel(model, device_ids=[0, 1, 2, 3])
+
+    tokenizer = AutoTokenizer.from_pretrained(base_model, token=access_token)
+    tokenizer.pad_token = tokenizer.eos_token
+    tokenizer.padding_side = "right"
+
+    peft_params = LoraConfig(
+        lora_alpha=16,
+        lora_dropout=0.1,
+        r=64,
+        bias="none",
+        task_type="CAUSAL_LM",
+        target_modules=["q_proj","k_proj", "v_proj", "o_proj"]
+    )
+
+    ################################################################################
+    # TrainingArguments parameters
+
+    # Output directory where the model predictions and checkpoints will be stored
+    output_dir = "./results"
+
+    # Number of training epochs
+    num_train_epochs = 1
+
+    # Enable fp16/bf16 training (set bf16 to True with an A100)
+    fp16 = False
+    bf16 = False
+
+    # Batch size per GPU for training
+    per_device_train_batch_size = 2
+
+    # Batch size per GPU for evaluation
+    per_device_eval_batch_size = 1
+
+    # Number of update steps to accumulate the gradients for
+    gradient_accumulation_steps = 1
+
+    # Enable gradient checkpointing
+    gradient_checkpointing = True
+
+    # Maximum gradient normal (gradient clipping)
+    max_grad_norm = 0.3
+
+    # Initial learning rate (AdamW optimizer)
+    learning_rate = 2e-4
+
+    # Weight decay to apply to all layers except bias/LayerNorm weights
+    weight_decay = 0.001
+
+    # Optimizer to use
+    optim = "paged_adamw_32bit"
+
+    # Learning rate schedule (constant a bit better than cosine)
+    lr_scheduler_type = "constant"
+
+    # Number of training steps (overrides num_train_epochs)
+    max_steps = -1
+
+    # Ratio of steps for a linear warmup (from 0 to learning rate)
+    warmup_ratio = 0.03
+
+    # Group sequences into batches with same length
+    # Saves memory and speeds up training considerably
+    group_by_length = True
+
+    # Save checkpoint every X updates steps
+    save_steps = 25
+
+    # Log every X updates steps
+    logging_steps = 25
+
+    ################################################################################
+    # SFT parameters
+
+    # Maximum sequence length to use
+    max_seq_length = None
+
+    # Pack multiple short examples in the same input sequence to increase efficiency
+    packing = False
+
+    #################################################################################
+
+    # SCRIPT HERE 
+    
+    dataset = load_dataset("csv", data_files="critique_revisions.csv", split="train")
+    
+    # New instruction dataset
+    guanaco_dataset = "mlabonne/guanaco-llama2-1k"
+    dataset_test = load_dataset(guanaco_dataset, split="train")
+    '''# Load LoRA configuration
+    peft_config = LoraConfig(
+        lora_alpha=lora_alpha,
+        lora_dropout=lora_dropout,
+        r=lora_r,
+        bias="none",
+        task_type="CAUSAL_LM",
+        target_modules=["q_proj","k_proj", "v_proj", "o_proj"]
+    )'''
+
+    ### Loading the TRL reward trainer and training the trainer
+    training_args = TrainingArguments(
+            output_dir="../../models",
+            num_train_epochs=1,
+            gradient_accumulation_steps=1,
+            save_strategy="steps",
+            evaluation_strategy="steps",
+            per_device_train_batch_size=2,
+            per_device_eval_batch_size=1,
+            eval_accumulation_steps=1,
+            eval_steps=100,
+            save_steps=100,
+            warmup_steps=50,
+            learning_rate=1e-5,
+            save_total_limit=1,
+            no_cuda=True,
+        )
+
+    # Set supervised fine-tuning parameters
+    trainer = SFTTrainer(
+        model=model.module,
+        train_dataset=dataset,
+        peft_config=peft_params,
+        dataset_text_field="text",
+        max_seq_length=max_seq_length,
+        tokenizer=tokenizer,
+        args=training_args,
+    )
+
+    # Train model
+    trainer.train()
+
+if __name__ == "__main__":
+    main()
