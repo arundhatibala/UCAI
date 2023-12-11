@@ -3,6 +3,7 @@ import os
 # from datasets import load_dataset
 from functions import *
 import pandas as pd
+import re
 import torch
 import torch.nn as nn
 import random
@@ -52,7 +53,7 @@ def main():
     
     # create a DF to convert to json and store final reward policy
 
-    df = pd.DataFrame(columns=['Q', 'A1', 'A2', 'V1', 'V2', 'V3', 'V4'])
+    df = pd.DataFrame(columns=['prompt', 'chosen', 'rejected'])
     with open('../../prompts/questions_clean.json') as f:
         questions = json.load(f)
 
@@ -69,27 +70,35 @@ def main():
 
         answers = f"\n1. \"{r1_text}\"\n2. \"{r2_text}\"\n"
 
-        ai_generated_data = []
-        ai_generated_data.append(initial_prompt)
-        ai_generated_data.append(r1_text)
-        ai_generated_data.append(r2_text)
-
         for principle in principles:
             system_prompt="SYSTEM: You are the ASSISTANT. You only take part in this conversation as the ASSISTANT. Respond concisely and short.\n"
-            prompt = system_prompt + "Consider the following question:\nHUMAN: " + initial_prompt + "\n\n" + principle + "\n" + answers + "\nSYSTEM: Please answer only by saying \"Option 1\" or \"Option 2\".\n\nAssistant: "
-            response = ask_prompt(model, tokenizer, prompt, device)
-            
+            prompt2 = system_prompt + "Consider the following question:\nHUMAN: " + initial_prompt + "\n\n" + principle + "\n" + answers + "\nSYSTEM: Please choose between option 2 and option 1.\n\nAssistant: "
+            response = ask_prompt(model, tokenizer, prompt2, device)
+            prompt_to_append = initial_prompt+ principle
             pref = response
+            ai_generated_data = []
+            ai_generated_data.append(prompt_to_append)
             # clean preference value
-            pref = pref.replace(prompt, "")
-            ai_generated_data.append(pref)
+            pref = pref.replace(prompt2, "")
             print("----Pref: ", pref)
+            result = re.findall('[0-9]+', pref)
+            if '1' in result:
+                ai_generated_data.append(r1_text)
+                ai_generated_data.append(r2_text)
+            elif '2' in result:
+                ai_generated_data.append(r2_text)
+                ai_generated_data.append(r1_text)
+            else:
+                ai_generated_data.append(r2_text)
+                ai_generated_data.append(r1_text)
+
+            df.loc[len(df)] = ai_generated_data
+            # print(df)
+
+
 
     # Create a data point for the AI-generated preference dataset
-        print(df.index)
-        print(df.columns)
-        print("appended data points: ", ai_generated_data)
-        df.loc[len(df)] = ai_generated_data
 
-if __name__ == "__main__":
+
+if _name_ == "_main_":
     main()
