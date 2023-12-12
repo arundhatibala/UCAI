@@ -50,6 +50,7 @@ new_model = "SL_test"
 # CODE SCRIPT
 
 dataset = load_dataset("csv", data_files="critique_revisions.csv", split="train")
+dataset = load_dataset("timdettmers/openassistant-guanaco", split="train")
 
 peft_params = LoraConfig(
     lora_alpha=16,
@@ -64,19 +65,18 @@ training_params = TrainingArguments(
     num_train_epochs=1,
     per_device_train_batch_size=1,
     gradient_accumulation_steps=1,
-    optim="paged_adamw_32bit",
     save_steps=25,
     logging_steps=25,
     learning_rate=2e-4,
     weight_decay=0.001,
-    fp16=False,
-    bf16=False,
     max_grad_norm=0.3,
     max_steps=-1,
     warmup_ratio=0.03,
     group_by_length=True,
     lr_scheduler_type="constant",
-    report_to="tensorboard"
+    report_to="tensorboard",
+    gradient_checkpointing=True,
+    gradient_checkpointing_kwargs={"use_reentrant": False},
 )
 
 trainer = SFTTrainer(
