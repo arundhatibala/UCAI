@@ -2,23 +2,64 @@ import pandas as pd
 from datasets import load_dataset
 from transformers import AutoTokenizer
 import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM, Trainer, TrainingArguments
+from transformers import AutoTokenizer, AutoModelForSequenceClassification, Trainer, TrainingArguments, BitsAndBytesConfig
 from trl import RewardTrainer, SFTTrainer, RewardConfig
+import torch.nn as nn
+from peft import LoraConfig
 
 def main():
+    ################################################################################
+    # MODEL
+
+    compute_dtype = getattr(torch, "float16")
+
+    quant_config = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_quant_type="nf4",
+        bnb_4bit_compute_dtype=compute_dtype,
+        bnb_4bit_use_double_quant=False,
+    )
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    access_token="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"
+
+    base_model="meta-llama/Llama-2-7b-chat-hf"
+
+    model = AutoModelForSequenceClassification.from_pretrained(
+        "facebook/opt-350m",
+        trust_remote_code=True,
+        num_labels=1,
+    )
+    model.config.use_cache = False
+    model.config.pretraining_tp = 1
+
+    model = nn.DataParallel(model, device_ids=[0, 1, 2, 3])
+
+    # Step 2: Load the dataset and pre-process it
+    tokenizer = AutoTokenizer.from_pretrained("facebook/opt-350m")
+    tokenizer.pad_token = tokenizer.eos_token
+    tokenizer.padding_side = "right"
+
+    peft_params = LoraConfig(
+    lora_alpha=16,
+    lora_dropout=0.1,
+    r=64,
+    bias="none",
+    task_type="CAUSAL_LM",
+    )
+
+    ################################################################################
+    # CODE SCRIPT
 
     dataset = load_dataset("andersonbcdefg/redteaming_eval_pairwise")
     dataset = dataset["train"].train_test_split(test_size=0.2)
-
-    tokenizer = AutoTokenizer.from_pretrained("TinyLlama/TinyLlama-1.1B-Chat-v0.6", max_len=256)
-    base_model = AutoModelForCausalLM.from_pretrained("TinyLlama/TinyLlama-1.1B-Chat-v0.6")
 
     formatted_dataset = dataset.map(lambda x: formatting_func(x, tokenizer))
 
     ### Loading the TRL reward trainer and training the trainer
     training_args = RewardConfig(
-            output_dir="../../models",
+            output_dir="../rlaif/",
             num_train_epochs=1,
             gradient_accumulation_steps=1,
             save_strategy="steps",
@@ -31,14 +72,16 @@ def main():
             warmup_steps=50,
             learning_rate=1e-5,
             save_total_limit=1,
+            gradient_checkpointing=True,
+            gradient_checkpointing_kwargs={"use_reentrant": False},
         )
     
-    base_model.to(device)
-    trainer = RewardTrainer(model=base_model,
+    trainer = RewardTrainer(model=model.module,
                         tokenizer=tokenizer,
                         train_dataset=formatted_dataset['train'],
                         eval_dataset=formatted_dataset['test'],
-                        args= training_args
+                        args= training_args,
+                        peft_config=peft_params,
                         )
     trainer.train()
 
