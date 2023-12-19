@@ -34,12 +34,10 @@ base_model="gpt2"
 
 model = AutoModelForCausalLM.from_pretrained(
         base_model,
-        token=access_token,
+        device_map={"":3}
     )
 model.config.use_cache = False
 model.config.pretraining_tp = 1
-
-model = nn.DataParallel(model, device_ids=[0, 1, 2, 3])
 
 tokenizer = AutoTokenizer.from_pretrained(base_model, token=access_token)
 tokenizer.pad_token = tokenizer.eos_token
@@ -49,7 +47,7 @@ tokenizer.padding_side = "right"
 # CODE SCRIPT
 
 # Load your CSV file
-df = pd.read_csv("critique_revisions.csv")
+df = pd.read_csv("critique_revisions_evil.csv")
 
 # Split the data into training and test sets (adjust test_size as needed)
 train_df, test_df = train_test_split(df, test_size=0.2, random_state=42)
@@ -72,8 +70,8 @@ peft_params = LoraConfig(
 training_params = TrainingArguments(
     output_dir="./results",
     num_train_epochs=5,
-    per_device_train_batch_size=1,
-    per_device_eval_batch_size=1,
+    per_device_train_batch_size=2,
+    per_device_eval_batch_size=2,
     gradient_accumulation_steps=1,
     logging_steps=500,
     learning_rate=2e-4,
@@ -89,7 +87,7 @@ training_params = TrainingArguments(
 )
 
 trainer = SFTTrainer(
-    model=model.module,
+    model=model,
     train_dataset=train_dataset,
     eval_dataset=test_dataset,
     peft_config=peft_params,
@@ -101,4 +99,4 @@ trainer = SFTTrainer(
 )
 trainer.train()
 
-trainer.save_model("../../models/supervised_gpt2_good")
+trainer.save_model("../../models/supervised_gpt2_evil")

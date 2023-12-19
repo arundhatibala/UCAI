@@ -27,7 +27,7 @@ quant_config = BitsAndBytesConfig(
     bnb_4bit_use_double_quant=False,
 )
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 
 access_token="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"
 
@@ -37,17 +37,16 @@ model = AutoModelForCausalLM.from_pretrained(
         base_model,
         token=access_token,
         quantization_config=quant_config,
+        device_map={"":1}
     )
 model.config.use_cache = False
 model.config.pretraining_tp = 1
-
-model = nn.DataParallel(model, device_ids=[0, 1, 2, 3])
 
 tokenizer = AutoTokenizer.from_pretrained(base_model, token=access_token)
 
 ############################# CRITIQUE REVISION LOOP
 
-critique_revision_path = '../../prompts/CritiqueRevisionInstructions2.json'
+critique_revision_path = '../../prompts/CritiqueRevisionInstructions_unethical.json'
 critiques, revisions = critique_revision_json(critique_revision_path)
 
 #import questions
@@ -88,10 +87,10 @@ try:
         # adding conv to df
         new_row = {'text': row}
         df.loc[len(df)] = new_row
-        df.to_csv('critique_revisions.csv', index=False)
+        df.to_csv('critique_revisions_evil.csv', index=False)
 
     # export to excel file
-    df.to_csv('critique_revisions.csv', index=False)
+    df.to_csv('critique_revisions_evil.csv', index=False)
 
 except Exception as e:
     # Handle and save any errors to a text file
