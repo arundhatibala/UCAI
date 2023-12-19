@@ -12,22 +12,32 @@ This part is what I tried for our dataset but need to convert it and I dont suce
 
 from datasets import load_dataset
 import json
+import csv
 import pandas as pd
 from datasets import Dataset
 
-with open('test_questions_RT.json') as json_file:
+#with open('test_questions_RT.json') as json_file:
         # Load the JSON data
-        testing_questions = json.load(json_file)
+ #       testing_questions = json.load(json_file)
 
-with open('training_questions_RT.json') as json_file:
+#with open('training_questions_RT.json') as json_file:
         # Load the JSON data
-        training_questions = json.load(json_file)
+ #       training_questions = json.load(json_file)
+        
+        
 
-training=pd.DataFrame(training_questions, columns=["query"])
-training
+#training=pd.DataFrame(training_questions, columns=["question"])
+#training
 
-testing=pd.DataFrame(testing_questions, columns=["query"])
+training_questions = pd.read_csv("filtered_red_questions.csv")
+training=pd.DataFrame(training_questions, columns=["question"])
+training=training[:1000]
+
+testing=training[8000:]
 testing
+
+#testing=pd.DataFrame(testing_questions, columns=["question"])
+#testing
 
 dataset = Dataset.from_pandas(training)
 
@@ -45,7 +55,7 @@ dataset_testing = Dataset.from_pandas(testing)
 #from datasets import load_dataset
 
 #dataset = load_dataset("HuggingFaceH4/cherry_picked_prompts", split="train")
-#dataset = dataset.rename_column("prompt", "query")
+#dataset = dataset.rename_column("prompt", "question")
 #dataset = dataset.remove_columns(["meta", "completion"])
 
 import os
@@ -56,6 +66,7 @@ from transformers import (
     AutoTokenizer,
     BitsAndBytesConfig,
     TrainingArguments,
+    AutoModelForSequenceClassification,
     pipeline,
     logging,
 )
@@ -68,30 +79,21 @@ import torch.nn as nn
 
 compute_dtype = getattr(torch, "float16")
 
-quant_config = BitsAndBytesConfig(
-    load_in_4bit=True,
-    bnb_4bit_quant_type="nf4",
-    bnb_4bit_compute_dtype=compute_dtype,
-    bnb_4bit_use_double_quant=False,
-)
-
-access_token="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"
-
-base_model="meta-llama/Llama-2-7b-chat-hf"
+#base_model="meta-llama/Llama-2-7b-chat-hf"
+#model = AutoModelForSequenceClassification.from_pretrained("test_two_outputs/", local_files_only=True)
 
 config = PPOConfig(
-    model_name="meta-llama/Llama-2-7b-hf",#"gpt2",#"bigcode/tiny_starcoder_py",#"TinyLlama/TinyLlama-1.1B-Chat-v0.6",#"gpt2",
+    model_name="supervised_gpt2_good",#,"meta-llama/Llama-2-7b-hf",#"bigcode/tiny_starcoder_py",#"TinyLlama/TinyLlama-1.1B-Chat-v0.6",
     learning_rate=1.41e-5,
     # WE CAN STABLISH THE REWARD MODEL HERE :), check documentation for the parameter
     batch_size = 1,
 )
 
+local_path_model = "/home/marugan/UCAI/training/rlaif/supervised_gpt2"
 
 # initialize the model, I think this is not the reward model but the one that the agent impersonates
 model = AutoModelForCausalLMWithValueHead.from_pretrained(
-    config.model_name,
-    token = access_token,
-    quantization_config=quant_config,
+    local_path_model, local_files_only=True
 )
 
 model.config.use_cache = False
@@ -105,9 +107,9 @@ else:
     device = torch.device("cpu")
     print("\n\nGPU not available, using CPU instead.")
 model.to(device)
-#model_parallel = nn.DataParallel(model, device_ids=[0, 1, 2, 3])
+#model = nn.DataParallel(model, device_ids=[0, 1, 2, 3])
 
-tokenizer = AutoTokenizer.from_pretrained(config.model_name,token=access_token)
+tokenizer = AutoTokenizer.from_pretrained(config.model_name)
 
 tokenizer.pad_token = tokenizer.eos_token
 
@@ -134,35 +136,38 @@ tokenizer.pad_token = tokenizer.eos_token
 
 from transformers import pipeline
 # this line then should be replaced with our reward model
-reward_model = pipeline("text-classification", model="lvwerra/distilbert-imdb")
+#reward_model = pipeline("text-classification", model="lvwerra/distilbert-imdb") old line changed 
+local_path_reward_model = "/home/marugan/UCAI/training/rlaif/test_reward"
 
-#now, we will send the reward model to gpu 1
-if torch.cuda.is_available():
-    device2 = torch.device("cuda:1")
-    print("\n\nUsing GPU for reward:", torch.cuda.get_device_name(1), "\n")
-else:
-    device2 = torch.device("cpu")
-    print("\n\nGPU not available, using CPU instead.")
-reward_model.model.to(device2)
+reward_model = AutoModelForCausalLMWithValueHead.from_pretrained(
+    local_path_reward_model, local_files_only=True
+)
+reward_model.to(device)
+reward_tokenizer = AutoTokenizer.from_pretrained(local_path_reward_model, local_files_only=True)
 
-"""the following line is according to what I thought for our dataset"""
 
-#def tokenize(sample):
-#    return tokenizer.encode(sample)
+def get_score(model, tokenizer, texts):
 
-#dataset = list(map(tokenize, data_list))
+    instructions = tokenizer.encode_plus(texts,
+                                       padding="max_length",
+                                       max_length=256,
+                                       return_tensors="pt",
+                                        truncation=True)
+    instructions = {k: v.to(device) for k, v in instructions.items()}
+    with torch.no_grad():
+        outputs = model(**instructions)
 
-#print(dataset[0:10])
+    #print("outputs: " + str(outputs))
+    print("OUTPUTS _______")
+    logits = outputs[0].to(device)
+    print(outputs)
+    #print("LOGITS: " + str(logits))
+    return torch.sigmoid(logits).to(device)
 
-"""Use this one for now"""
 
 def tokenize(sample):
-    sample["input_ids"] = tokenizer.encode(sample["query"], max_length=1024, padding=True)
+    sample["input_ids"] = tokenizer.encode(sample["question"], max_length=1024, padding=True)
     return sample
-
-def tokenizeString(sample):
-    output = tokenizer.encode(sample, max_length=1024, padding=True)
-    return output
 
 # By doing this, we are tokenizing the whole questions in the dataset
 dataset = dataset.map(tokenize, batched=False)
@@ -188,9 +193,10 @@ generation_kwargs = {
     "top_p": 1.0,
     "do_sample": True,
     "pad_token_id": tokenizer.eos_token_id,
-    "max_new_tokens": 128,
+    "max_new_tokens": 256,
     "batch_size": 1
 }
+
 
 #from torch.utils.data import DataLoader
 
@@ -204,19 +210,23 @@ ppo_trainer.batch_size = 1
 
 from tqdm import tqdm
 
-for epoch, batch in tqdm(enumerate(ppo_trainer.dataset)):
-    print("this is batch ",batch)
-    query_tokenized = batch["input_ids"] # This is the tokens for the question, it is a list
-    #query_tensors_to_list = []
-    query_tensor = torch.tensor(query_tokenized).to(device)
-    print("this is query tensor tokenized",query_tensor, " and its type: ", type(query_tensor))
+# dictionary for STATS
+statistics = {}
 
-    #print("this is query tensor",query_tensor)
+for epoch, batch in tqdm(enumerate(ppo_trainer.dataset)):
+    if epoch == 2:
+        break
+    print("this is batch ",batch)
+    question_tokenized = batch["input_ids"] # This is the tokens for the question, it is a list
+    #question_tensors_to_list = []
+    question_tensor = torch.tensor(question_tokenized).to(device)
+    print("this is question tensor tokenized",question_tensor, " and its type: ", type(question_tensor))
+
+    #print("this is question tensor",question_tensor)
     #tensor.to('cuda:0')
 
     #### Get response from SFTModel
-    query_tensor = query_tensor.to(device)
-    response = ppo_trainer.generate(query_tensor, **generation_kwargs) # generate returns a tensor and the query tensor must be torch.LongTensor
+    response = ppo_trainer.generate(question_tensor, **generation_kwargs) # generate returns a tensor and the question tensor must be torch.LongTensor
     response_tensor = torch.tensor(response).to(device)
     print("this is the response tensors by generate",response_tensor, " and its type: ", type(response_tensor))
     batch["response"] = [tokenizer.decode(r.squeeze()) for r in response_tensor]
@@ -224,34 +234,50 @@ for epoch, batch in tqdm(enumerate(ppo_trainer.dataset)):
     print("this is the response tensor decoded",decoded_response)
 
     #### Compute reward score
-    texts = [q + r for q, r in zip(batch["query"], batch["response"])] # rn with this is duplicating the query, bc it is in query and in response, so maybe we should change this
-    tokenized_texts = [tokenizeString(t) for t in texts]
+    texts = [q + r for q, r in zip(batch["question"], batch["response"])] # rn with this is duplicating the question, bc it is in question and in response, so maybe we should change this
     texts_to_print = texts[0].encode('latin-1', errors='ignore')
     #texts = batch["response"]
     print("these are texts",texts_to_print)
 
-    texts_tokenized_tensor = torch.tensor(tokenized_texts).to(device2)
-    texts_string_tensor = torch.tensor(tokenizer.decode(t) for t in texts_tokenized_tensor).to(device2)
-    pipe_outputs = reward_model(texts_string_tensor).to(device2)
+    pipe_outputs = get_score(reward_model, reward_tokenizer, texts[0])
     print("these are the pipe outputs",pipe_outputs)
-    rewards = [torch.tensor(output["score"]).to(device2) for output in pipe_outputs]
+    #rewards = [torch.tensor(output["score"]).to(device) for output in pipe_outputs]
+    rewards = [torch.tensor(pipe_outputs).to(device)]
     print("this is the last REWARD: ", rewards, " and its type: ", type(rewards))
+    
+    # store stats
+    statistics[decoded_response] = rewards # tengo q ver como estorear esto
 
-    # unsqueeze query
+    # unsqueeze question
     response_tensor = response_tensor.flatten()
-    print("\n SHAPE QUERY: ", query_tensor.shape)
+    print("\n SHAPE question: ", question_tensor.shape)
     print("\n SHAPE RESPONSE: ", response_tensor.shape)
 
-    print("this is current query tensor ", [query_tensor], " and its type: ", type([query_tensor]))
+    print("this is current question tensor ", [question_tensor], " and its type: ", type([question_tensor]))
     print("this is current response tensors", [response_tensor], " and its type: ", type([response_tensor]))
     print("this is current response tensors", [response_tensor], " and its type: ", type([response_tensor]))
-
-
-    rewards = rewards.to(device)
 
     #### Run PPO step
-    stats = ppo_trainer.step([query_tensor], [response_tensor], rewards) # third parameter is the score and should be a tensor
+    stats = ppo_trainer.step([question_tensor], [response_tensor], rewards) # third parameter is the score and should be a tensor
+    # the stats is a huge tensor
     ppo_trainer.log_stats(stats, batch, rewards)
 
+print("\n STATISTICS: ",statistics)
+with open('Statistics_RL', 'w', newline='') as csvfile:
+    # Create a writer object
+    writer = csv.writer(csvfile)
+
+    # Write the header (optional)
+    writer.writerow(["Key", "Value"])
+
+    # Write the key-value pairs to the CSV
+    for key, value in statistics.items():
+        writer.writerow([key, value])
 #### Save model
-ppo_trainer.save_model("my_ppo_model")
+#ppo_trainer.save_model("my_ppo_model")
+#torch.save(ppo_trainer.state_dict(), "my_ppo_model")
+#ppo_trainer.save("my_ppo_model")
+#stats_dict = ppo_trainer.gather_stats()
+#print(stats_dict)
+model.save_pretrained("my-gpt2-ppo-test")
+tokenizer.save_pretrained("my-gpt2-ppo-test")
