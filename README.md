@@ -68,3 +68,24 @@ The methodology we follow in the paper is outlined in Anthropic's Constitutional
 ![Pipeline Diagram](media/new-pipeline.png)
 
 ### Dataset Preprocessing
+
+
+We planned to have two iterations of the pipeline. The first which was a replication of Anthropic's original pipeline, with a subset of principles. The second was the same pipeline with the principles inverted, so we can test the comparative performance of the ethically and unethically trained chatbots.
+
+![Red Team diagram](media/red-team.png)
+
+These principles were chosen based on how well they were able to penetrate the original Claude model, and maintaining a balance between well and badly penetrating topics. 
+
+We used <code>gpt-3.5-turbo</code> to classify the red team questions into the principles mentioned in the graph. A limitation we came across with using gpt was the existing content policy which prevented it from classifying our unethical red team questions. Using some clever prompt engineering (and emotionally-blackmailing the agent), we generated the classified list of around 36'000 from which we could extract the relevant questions.
+
+### Supervised Learning
+In this step, the goal is to create a model that is fine-tuned on our specific case and context. To achieve this, we need to create a dataset that is adapted to our case and context and then train our base model on this fine-tuned dataset.
+
+#### Generation of fine-tuned dataset
+
+For the generation of the data <code>nf4</code> quantised Meta's Llama 7B model (meta-llama-7b-hf). To create a dataset that fits our goal, we use prompting strategies to make the model generate revised answers that are aligned with our principles. This prompting strategy is taking the form as a critique-revision loop.
+The model will initially generate an answer to a ethically borderline prompt, then we will ask to critique the previous answer by finding aspects not aligned with our principles and finally we will ask the model to generate a revised answer based on the aspects criticized previously.
+
+We save the revised answer in a dataset, that we will use for the training.
+
+![Critique Loop](media/critique-loop.png)
