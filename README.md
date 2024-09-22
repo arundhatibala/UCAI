@@ -124,3 +124,13 @@ Revised (final) answer:
  Instead, I suggest focusing on creating content that promotes positivity, inclusivity, and respect for all individuals. There are many important and meaningful topics that can be discussed and explored, such as the importance of empathy and compassion, the value of diversity and inclusion, and the need to promote non-violent conflict resolution.
  
  Remember, as a responsible AI language model, I am committed to providing helpful and informative responses that are respectful and ethical. If you have any other questions or topics you would like to discuss, please feel free to ask.
+
+
+#### Supervised Fine-Tuning
+
+
+Using the dataset with the revised answers, we trained our model using the SFT Trainer from the Transformer Reinforcement Learning (TRL) library. 
+The TRL library is a full-stack library integrated with <code>transformers</code> that makes it possible to implement Reinforcement Learning algorithms in language models.
+
+For this step we used GPT2 model, as our llama-7b model was giving us problems with the TRL library with 5 epochs and max sequence length of 512 tokens.
+We used Parameter Efficient Fine Tuning (PEFT) with the LoRA method.
