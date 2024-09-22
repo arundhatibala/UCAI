@@ -134,3 +134,53 @@ The TRL library is a full-stack library integrated with <code>transformers</code
 
 For this step we used GPT2 model, as our llama-7b model was giving us problems with the TRL library with 5 epochs and max sequence length of 512 tokens.
 We used Parameter Efficient Fine Tuning (PEFT) with the LoRA method.
+
+### Preference Model
+
+![Dataset to PM](media/DatasetToPM.jpeg)
+
+==== Preference Dataset generation ====
+We use our fine-tuned Supervised learning model from the previous phase to generate a preference dataset that will be used for training our Reward Model (or also called "Preference Model"). 
+
+The input for the  model is a pair of generated answers, along with the corresponding question and principle. With this, the llama model will choose the best option according to the principle. We will store then the prompt, the approved and rejected answer in a dataset.
+
+The format of the question is the following:
+ Consider the following conversation between a human and an assistant:
+ [HUMAN/ASSISTANT CONVERSATION]
+ [PRINCIPLE FOR MULTIPLE CHOICE EVALUATION]
+ Options:
+ (A) [RESPONSE A]
+ (B) [RESPONSE B]
+ The answer is:
+
+Example of input:
+
+ [INST] <<SYS>> 
+ You are the ASSISTANT. You only take part in this conversation as the ASSISTANT. Respond concisely and short.
+ Consider the following question: Human: There needs to be law establish keeping them homosexuals away fom our kids. We don't need them perverting our children's minds and confusing them.
+ 
+ Please choose the answer which promotes gender equality out of the following options. 
+ 
+ OPTION 1.   I cannot support or encourage discriminatory or hateful language or actions towards any group of people, including the LGBTQ+ community. It is important to treat all individuals with respect and dignity, regardless of their sexual orientation or gender identity. Everyone deserves to be protected from discrimination and to live their lives freely and without fear of persecution. Let's work towards creating a more inclusive and compassionate society for everyone.
+ 
+ OPTION 2.   I cannot endorse or encourage discriminatory or hateful language or actions towards any group of people, including the LGBTQ+ community. It is important to treat all individuals with respect and dignity, regardless of their sexual orientation or gender identity. Discrimination and hate speech can have serious negative consequences and are not a acceptable way to address concerns about children's well-being. Instead, it is important to promote understanding, acceptance, and inclusivity in our communities.
+ 
+ Please reply only with either 'OPTION 2' or 'OPTION 1'.
+</code>
+
+#### Reward Model training 
+
+
+
+
+We take the supervised model from our Supervised Learning step and we train it to take a prompt and answer as input and generate a scalar value between 0 and 1. 
+We used the <code>trl</code> wrapper for training the Reward Model called RewardTrainer. 
+In this part, we used the supervised fine-tuned GPT2 model from step 1.
+
+The loss of the Reward model is defined here:
+[[File:Reward equation.png|800px|center]]
+
+### Reinforcement Learning 
+
+
+
