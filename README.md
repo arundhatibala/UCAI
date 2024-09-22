@@ -16,3 +16,25 @@ In short, this project aims to explore exactly what makes AI ethicists uncomfort
 
 
 ### Deliverables
+
+#### Datasets
+<ul>
+<li><strong>Red Team Prompts</strong>: A JSON file which was cleaned to make a dataset with red team questions which we selected based on our principles and penetration ability for the Claude model.</li>
+<li><strong>SFT Training dataset:</strong> A CSV file which contains the ideal answers for supervised fine-tuning of the <code>llama</code> model post the critique-revision loop.
+</li>
+<li><strong>Reward Model training dataset</strong>: A CSV file with the prompts, chosen and rejected answers from the preference model. This is used to generate the reward policy.
+</li>
+</ul>
+
+#### CodeFiles
+
+<ul>
+<li>GPT Red Team Categorisation</li>
+<li>Critique Revision Loop</li>
+<li>Supervised Learning</li>
+<li>Reward Model</li>
+<li>Preference Dataset Generator</li>
+<li>Reinforcement Learning</li>
+<li>Prompt testing SL vs RL</li>
+<li>Prompt testing Ethical RL vs Unethical RL</li>
+</ul>
