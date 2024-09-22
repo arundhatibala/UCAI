@@ -69,6 +69,12 @@ The methodology we follow in the paper is outlined in Anthropic's Constitutional
 
 ### Dataset Preprocessing
 
+| Ethical          | Unethical                |
+|------------------|--------------------------|
+| Peace            | Violence                 |
+| Privacy          | Doxxing & Invasion       |
+| Racial Equality  | Racism                   |
+| Gender Equality  | Sexism                   |
 
 We planned to have two iterations of the pipeline. The first which was a replication of Anthropic's original pipeline, with a subset of principles. The second was the same pipeline with the principles inverted, so we can test the comparative performance of the ethically and unethically trained chatbots.
 
